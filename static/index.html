@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>OpenCode 桌面</title>
+  <link rel="icon" href="/static/icon.png">
+  <link id="hljs-theme" rel="stylesheet" href="/static/vendor/github-dark.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div id="app-background" class="app-background" hidden aria-hidden="true"></div>
+  <div id="app" class="app">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-head">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="8.5" stroke="white" stroke-width="3"/>
+              <path d="M23 23L28 28" stroke="white" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="16" cy="16" r="2.6" fill="white"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <strong>OpenCode</strong>
+            <span>桌面工作台</span>
+          </div>
+        </div>
+        <button id="theme-toggle" class="icon-btn" title="切换主题" aria-label="切换主题">
+          <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <button id="new-chat" class="new-chat">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span>新建会话</span>
+        <kbd>Ctrl N</kbd>
+      </button>
+
+      <div class="search-box">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input id="session-search" type="text" placeholder="搜索会话" autocomplete="off" spellcheck="false">
+      </div>
+
+      <nav id="session-list" class="session-list" aria-label="会话列表"></nav>
+
+      <div class="sidebar-foot">
+        <button id="project-btn" class="project-btn" title="切换项目文件夹">
+          <span class="project-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-9Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="project-copy">
+            <span class="project-label">当前项目</span>
+            <span id="project-path" class="project-path">未选择文件夹</span>
+          </span>
+          <svg class="icon project-chevron" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="conn-row">
+          <span id="conn-dot" class="conn-dot"></span>
+          <span id="conn-text">正在启动…</span>
+          <button id="settings-btn" class="icon-btn small" title="设置" aria-label="设置">
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.6"/><path d="M19 13.4a7.6 7.6 0 0 0 0-2.8l2-1.5-2-3.4-2.3 1a7.8 7.8 0 0 0-2.4-1.4L14 2.8h-4l-.3 2.5A7.8 7.8 0 0 0 7.3 6.7l-2.3-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 2.8l-2 1.5 2 3.4 2.3-1a7.8 7.8 0 0 0 2.4 1.4l.3 2.5h4l.3-2.5a7.8 7.8 0 0 0 2.4-1.4l2.3 1 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+      <header class="topbar">
+        <button id="sidebar-toggle" class="icon-btn sidebar-toggle" aria-label="打开侧栏">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+        <div class="topbar-title">
+          <h1 id="chat-title">新会话</h1>
+          <div class="topbar-sub">
+            <span id="chat-state-dot" class="state-dot idle"></span>
+            <span id="chat-state">已就绪</span>
+            <span class="sub-sep">·</span>
+            <span id="chat-agent">Build</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="update-btn" class="ghost-btn update-btn" title="发现 OpenCode CLI 新版本" hidden>
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 4v10m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="update-label">更新</span>
+            <span id="update-version" class="badge"></span>
+          </button>
+          <button id="todo-btn" class="ghost-btn todo-btn" hidden>
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="m4.5 7 1.5 1.5L9 5.5M4.5 13l1.5 1.5L9 11.5M4.5 19l1.5 1.5L9 17.5M12.5 7H20M12.5 13H20M12.5 19H20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>待办</span>
+            <span id="todo-progress" class="badge">0/0</span>
+          </button>
+          <button id="open-folder-btn" class="icon-btn" title="在资源管理器中打开项目" aria-label="打开项目文件夹">
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-9Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m10 12 4 0m-1.5-1.5L14 12l-1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <section id="chat-scroll" class="chat-scroll">
+        <div class="chat">
+          <div id="welcome" class="welcome">
+            <div class="welcome-mark" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="13" stroke="url(#wg)" stroke-width="4"/>
+                <path d="M34.5 34.5L42 42" stroke="url(#wg)" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="24" cy="24" r="4" fill="url(#wg)"/>
+                <defs>
+                  <linearGradient id="wg" x1="8" y1="8" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#7aa2ff"/>
+                    <stop offset="1" stop-color="#a78bfa"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <h2>今天想构建什么？</h2>
+            <p id="welcome-sub">让 OpenCode 理解你的项目，然后一起完成它。</p>
+            <div class="suggestions">
+              <button class="suggestion" data-prompt="先快速浏览这个项目，告诉我它的用途、技术栈和目录结构。">
+                <span class="suggestion-icon">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 5.5h6l2 2h8v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                </span>
+                <span><strong>了解项目</strong><small>梳理用途、技术栈与结构</small></span>
+              </button>
+              <button class="suggestion" data-prompt="检查这个项目里可能存在的 bug、安全风险或明显的代码质量问题，并按优先级说明。">
+                <span class="suggestion-icon">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 3.5 21 20H3L12 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9v5M12 17.2v.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                <span><strong>查找问题</strong><small>发现 bug 与安全隐患</small></span>
+              </button>
+              <button class="suggestion" data-prompt="为这个项目补充缺失的测试，优先覆盖核心逻辑，并运行测试确认结果。">
+                <span class="suggestion-icon">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M9 3.5h6M10 3.5v6.2L5.2 18a1.6 1.6 0 0 0 1.4 2.5h10.8a1.6 1.6 0 0 0 1.4-2.5L14 9.7V3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                </span>
+                <span><strong>补充测试</strong><small>覆盖核心逻辑并验证</small></span>
+              </button>
+              <button class="suggestion" data-prompt="总结最近一次代码改动，说明改了什么、可能存在哪些风险，以及建议的后续步骤。">
+                <span class="suggestion-icon">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h14v15H5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 9h7M8.5 12.5h7M8.5 16h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                </span>
+                <span><strong>总结改动</strong><small>回顾最近的代码变更</small></span>
+              </button>
+            </div>
+          </div>
+          <div id="messages" class="messages"></div>
+        </div>
+      </section>
+
+      <button id="jump-latest" class="jump-latest" hidden>
+        <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14m0 0 6-6m-6 6-6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+
+      <footer class="composer-wrap">
+        <div id="prompt-queue" class="prompt-queue" hidden></div>
+        <div class="composer">
+          <div id="command-popover" class="command-popover" role="listbox" aria-label="命令" hidden></div>
+          <div id="composer-attachments" class="composer-attachments" hidden></div>
+          <textarea id="prompt" rows="1" placeholder="给 OpenCode 发送消息…" spellcheck="false"></textarea>
+          <div class="composer-bar">
+            <div class="composer-selectors">
+              <button id="attach-btn" class="selector attach-btn" type="button" title="添加图片">
+                <svg class="icon" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.6" stroke="currentColor" stroke-width="1.4"/><path d="m5.5 17 4.5-4.5 3 3 2.2-2.2 3.3 3.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>图片</span>
+              </button>
+              <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+              <button id="file-btn" class="selector attach-btn" type="button" title="添加本地文件（发送绝对路径）">
+                <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M6.5 3.5h7l4 4v13h-11z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 3.5v4h4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 13h6M9 16.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <span>文件</span>
+              </button>
+              <button id="agent-picker" class="selector" title="选择 Agent">
+                <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 3.8 19 8v8l-7 4.2L5 16V8l7-4.2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>
+                <span id="agent-label">Build</span>
+              </button>
+              <button id="model-picker" class="selector" title="选择模型">
+                <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M8 6.5h8M6.5 12h11M8 17.5h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1.4" fill="currentColor"/><circle cx="18" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="17.5" r="1.4" fill="currentColor"/></svg>
+                <span id="model-label">选择模型</span>
+                <svg class="icon chevron" viewBox="0 0 24 24" fill="none"><path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button id="variant-picker" class="selector compact" title="推理强度" hidden>
+                <span id="variant-label">默认</span>
+              </button>
+              <span id="context-usage" class="context-usage" hidden>
+                <span class="context-usage-text">上下文</span>
+                <span id="context-usage-tokens" class="context-usage-tokens">0 / 0</span>
+                <strong id="context-usage-value">0%</strong>
+              </span>
+            </div>
+            <div class="composer-actions">
+              <span id="composer-hint" class="composer-hint">Enter 发送 · Ctrl+Enter 换行</span>
+              <button id="stop-btn" class="stop-btn" hidden title="停止生成">
+                <svg class="icon" viewBox="0 0 24 24" fill="none"><rect x="7" y="7" width="10" height="10" rx="1.6" fill="currentColor"/></svg>
+                <span>停止</span>
+              </button>
+              <button id="send-btn" class="send-btn" title="发送" disabled>
+                <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 19V5m0 0-6 6m6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="composer-status" class="composer-status"></div>
+      </footer>
+    </main>
+  </div>
+
+  <div id="onboarding" class="overlay onboarding" hidden>
+    <div class="onboarding-card">
+      <div class="onboarding-mark">
+        <svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="13" stroke="white" stroke-width="4"/><path d="M34.5 34.5L42 42" stroke="white" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="24" r="4" fill="white"/></svg>
+      </div>
+      <h2>连接你的项目</h2>
+      <p>选择一个文件夹，OpenCode 将在这个项目中为你工作。路径会保存在本机。</p>
+      <div class="field-row">
+        <input id="onboarding-path" type="text" placeholder="D:\path\to\project" spellcheck="false">
+        <button id="onboarding-browse" class="btn secondary">浏览…</button>
+      </div>
+      <button id="onboarding-start" class="btn primary wide">开始使用</button>
+      <span id="onboarding-auth-hint" class="onboarding-hint">首次使用请先登录自己的 OpenCode 账户。首次启动服务可能需要几秒钟。</span>
+      <div class="onboarding-login-row">
+        <button id="onboarding-login" class="btn secondary" hidden>登录 OpenCode</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="overlay loading" hidden>
+    <div class="loading-card">
+      <div class="spinner large"></div>
+      <h3 id="loading-title">正在启动 OpenCode</h3>
+      <p id="loading-text">载入项目上下文与模型配置…</p>
+    </div>
+  </div>
+
+  <div id="fatal" class="overlay" hidden>
+    <div class="fatal-card">
+      <div class="fatal-icon">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 3.5 21 20H3L12 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9v5M12 17.2v.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <h3 id="fatal-title">无法启动 OpenCode 服务</h3>
+      <p id="fatal-text">请检查安装或日志后重试。</p>
+      <pre id="fatal-log" class="fatal-log"></pre>
+      <div class="dialog-actions">
+        <button id="fatal-change" class="btn secondary">切换项目</button>
+        <button id="fatal-retry" class="btn primary">重试</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal" hidden>
+    <div class="modal-card settings-card" role="dialog" aria-modal="true" aria-label="设置">
+      <div class="modal-head">
+        <div>
+          <h3>设置</h3>
+          <p>项目路径与界面偏好</p>
+        </div>
+        <button class="icon-btn modal-close" data-close="settings-modal" aria-label="关闭">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">项目文件夹</label>
+        <div class="field-row">
+          <input id="settings-path" type="text" spellcheck="false" placeholder="选择一个项目文件夹">
+          <button id="settings-browse" class="btn secondary">浏览…</button>
+        </div>
+        <label class="field-label">界面主题</label>
+        <div class="theme-seg" role="group" aria-label="界面主题">
+          <button data-theme-choice="dark" class="seg active">
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            深色
+          </button>
+          <button data-theme-choice="light" class="seg">
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            浅色
+          </button>
+        </div>
+        <label class="field-label">界面背景</label>
+        <div class="wallpaper-setting">
+          <div id="settings-wallpaper-preview" class="wallpaper-preview">
+            <span class="wallpaper-preview-empty">未选择图片</span>
+          </div>
+          <div class="wallpaper-controls">
+            <div class="wallpaper-actions">
+              <button id="settings-wallpaper-pick" class="btn secondary" type="button">选择图片</button>
+              <button id="settings-wallpaper-clear" class="btn ghost" type="button" disabled>清除背景</button>
+              <input id="settings-wallpaper-input" type="file" accept="image/*" hidden>
+            </div>
+            <div class="wallpaper-opacity">
+              <div class="wallpaper-opacity-head">
+                <span>原背景颜色透明度</span>
+                <strong id="settings-wallpaper-opacity-value">35%</strong>
+              </div>
+              <input id="settings-wallpaper-opacity" type="range" min="0" max="100" step="1" value="35" aria-label="原背景颜色透明度">
+              <p class="wallpaper-hint">数值越高，背景图片越清晰；图片会自动铺满整个界面。</p>
+            </div>
+          </div>
+        </div>
+        <label class="field-label">权限</label>
+        <div class="setting-row">
+          <div class="setting-copy">
+            <strong>自动允许权限</strong>
+            <span>OpenCode 请求工具权限时自动允许本次操作。不会修改全局权限规则，请仅在信任当前项目时开启。</span>
+          </div>
+          <label class="switch">
+            <input id="settings-auto-allow" type="checkbox" aria-label="自动允许权限">
+            <span class="switch-track" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="service-info">
+          <div><span>OpenCode</span><strong id="service-exe">检测中…</strong></div>
+          <div><span>本地服务</span><strong id="service-port">—</strong></div>
+          <div><span>数据目录</span><strong id="service-config">—</strong></div>
+        </div>
+        <button id="settings-login" class="btn secondary settings-login">登录 / 切换 OpenCode 账户</button>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="settings-modal">取消</button>
+        <button id="settings-save" class="btn primary">保存并重启服务</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="model-modal" class="modal" hidden>
+    <div class="modal-card picker-card" role="dialog" aria-modal="true" aria-label="选择模型">
+      <div class="modal-head">
+        <div>
+          <h3>选择模型</h3>
+          <p>模型与推理强度会应用到下一条消息</p>
+        </div>
+        <button class="icon-btn modal-close" data-close="model-modal" aria-label="关闭">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="picker-search">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input id="model-search" type="text" placeholder="搜索模型或供应商" spellcheck="false" autocomplete="off">
+      </div>
+      <div id="model-list" class="model-list"></div>
+      <div id="variant-section" class="variant-section" hidden>
+        <div class="variant-head">
+          <span>推理强度</span>
+          <small>仅对当前模型生效</small>
+        </div>
+        <div id="variant-options" class="variant-options"></div>
+      </div>
+      <div class="modal-foot picker-foot">
+        <button id="model-done" class="btn primary">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="agent-modal" class="modal" hidden>
+    <div class="modal-card picker-card narrow" role="dialog" aria-modal="true" aria-label="选择 Agent">
+      <div class="modal-head">
+        <div>
+          <h3>选择 Agent</h3>
+          <p>不同 Agent 拥有不同的工具与行为方式</p>
+        </div>
+        <button class="icon-btn modal-close" data-close="agent-modal" aria-label="关闭">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div id="agent-list" class="agent-list"></div>
+    </div>
+  </div>
+
+  <div id="permission-modal" class="modal" hidden>
+    <div class="modal-card permission-card" role="dialog" aria-modal="true" aria-label="权限请求">
+      <div class="permission-head">
+        <div class="permission-icon">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 3.5 19 6v5.2c0 4.3-2.8 7.6-7 9.3-4.2-1.7-7-5-7-9.3V6l7-2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.3 12.2 11.2 14l3.6-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <h3>需要你的许可</h3>
+          <p id="permission-sub">OpenCode 想要执行一个操作</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="permission-type" id="permission-type">执行命令</div>
+        <div id="permission-detail" class="permission-detail"></div>
+        <div id="permission-patterns" class="chips"></div>
+      </div>
+      <div class="modal-foot permission-foot">
+        <button id="permission-reject" class="btn danger-ghost">拒绝</button>
+        <div class="foot-right">
+          <button id="permission-always" class="btn secondary">始终允许</button>
+          <button id="permission-once" class="btn primary">允许一次</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="question-modal" class="modal" hidden>
+    <div class="modal-card question-card" role="dialog" aria-modal="true" aria-label="问题">
+      <div class="modal-head">
+        <div>
+          <h3>OpenCode 想确认一下</h3>
+          <p>回答后它将继续执行</p>
+        </div>
+        <button id="question-reject-x" class="icon-btn modal-close" aria-label="拒绝">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div id="question-body" class="modal-body question-body"></div>
+      <div class="modal-foot">
+        <button id="question-reject" class="btn ghost">跳过</button>
+        <button id="question-submit" class="btn primary">提交回答</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="update-modal" class="modal" hidden>
+    <div class="modal-card update-card" role="dialog" aria-modal="true" aria-label="更新 OpenCode CLI">
+      <div class="modal-head">
+        <div>
+          <h3>发现 OpenCode CLI 新版本</h3>
+          <p>更新会暂时停止本地服务，完成后自动重新启动。</p>
+        </div>
+        <button id="update-close" class="icon-btn modal-close" data-close="update-modal" aria-label="关闭">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="update-versions">
+          <div class="update-version-item">
+            <span>当前版本</span>
+            <strong id="update-current">—</strong>
+          </div>
+          <svg class="icon update-arrow" viewBox="0 0 24 24" fill="none"><path d="M5 12h13m0 0-5-5m5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="update-version-item latest">
+            <span>最新版本</span>
+            <strong id="update-latest">—</strong>
+          </div>
+        </div>
+        <p class="update-note">更新通过 OpenCode 官方升级命令完成，不会修改你的项目和会话。</p>
+        <div id="update-progress" class="update-progress" hidden>
+          <span class="spinner"></span>
+          <span>正在下载并安装新版本，这可能需要几分钟，请勿关闭窗口。</span>
+        </div>
+        <div id="update-error" class="update-error" hidden>
+          <strong>更新失败</strong>
+          <p id="update-error-text"></p>
+          <pre id="update-detail" class="update-detail" hidden></pre>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button id="update-later" class="btn ghost">稍后</button>
+        <button id="update-start" class="btn primary">更新并重启</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rename-modal" class="modal" hidden>
+    <div class="modal-card rename-card" role="dialog" aria-modal="true" aria-label="重命名会话">
+      <h3>重命名会话</h3>
+      <p>输入一个便于识别的会话名称。</p>
+      <input id="rename-input" class="rename-input" type="text" maxlength="200" spellcheck="false" placeholder="会话名称">
+      <div class="dialog-actions">
+        <button id="rename-cancel" class="btn secondary">取消</button>
+        <button id="rename-save" class="btn primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm-modal" class="modal" hidden>
+    <div class="modal-card confirm-card" role="dialog" aria-modal="true" aria-label="确认">
+      <h3 id="confirm-title">确认操作</h3>
+      <p id="confirm-text"></p>
+      <div class="dialog-actions">
+        <button id="confirm-cancel" class="btn secondary">取消</button>
+        <button id="confirm-ok" class="btn danger">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="todo-drawer" class="drawer" hidden>
+    <div class="drawer-head">
+      <div>
+        <h3>任务待办</h3>
+        <p id="todo-summary">—</p>
+      </div>
+      <button id="todo-close" class="icon-btn" aria-label="关闭">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div id="todo-list" class="todo-list"></div>
+  </div>
+  <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
+
+  <div id="toasts" class="toasts"></div>
+
+  <script src="/static/vendor/marked.min.js"></script>
+  <script src="/static/vendor/purify.min.js"></script>
+  <script src="/static/vendor/highlight.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

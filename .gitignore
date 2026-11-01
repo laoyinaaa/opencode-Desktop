@@ -1,0 +1,36 @@
+# Python virtual environments
+.venv/
+.build-venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Build and release artifacts
+build/
+release/
+dist/
+*.spec.bak
+
+# Downloaded runtime installer
+packaging/webview2/
+*.exe
+
+# IDE / editor
+.vs/
+.idea/
+
+# Local backups and logs
+_backup_terminal_*/
+*.bak
+*.log
+*.tmp
+
+# OS metadata
+Thumbs.db
+desktop.ini
+.DS_Store
