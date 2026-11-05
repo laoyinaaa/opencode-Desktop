@@ -10,7 +10,8 @@
     agent: "oc.agent",
     variants: "oc.variants",
     session: "oc.session",
-    autoAllow: "oc.autoAllow"
+    autoAllow: "oc.autoAllow",
+    pinned: "oc.pinnedSessions"
   };
 
   const ui = {
@@ -174,6 +175,7 @@
     addingImages: false,
     autoAllow: false,
     autoAllowNoticeAt: 0,
+    pinned: new Set(),
     autoApproving: new Set(),
     autoApprovingBatch: false,
     permissions: [],
@@ -245,7 +247,8 @@
     image: '<svg class="icon" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.6" stroke="currentColor" stroke-width="1.4"/><path d="m5.5 17 4.5-4.5 3 3 2.2-2.2 3.3 3.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     reasoning: '<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M9.5 18.5h5M10 21h4M8 15.5a6.5 6.5 0 1 1 8 0c-.9.8-1.5 1.7-1.5 2.5h-5c0-.8-.6-1.7-1.5-2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     chevron: '<svg class="icon chevron" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    stop: '<svg class="icon" viewBox="0 0 24 24" fill="none"><rect x="7" y="7" width="10" height="10" rx="1.6" fill="currentColor"/></svg>'
+    stop: '<svg class="icon" viewBox="0 0 24 24" fill="none"><rect x="7" y="7" width="10" height="10" rx="1.6" fill="currentColor"/></svg>',
+    pin: '<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M8 4h8l-1.5 5.5 3 3V14H6.5v-1.5l3-3L8 4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 14v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
   };
 
   const TOOL_META = {
@@ -2463,6 +2466,121 @@
     return title || "新会话";
   }
 
+  function loadPinnedSessions() {
+    const raw = readStoredJson(STORE.pinned, []);
+    if (!Array.isArray(raw)) return new Set();
+    return new Set(raw.filter((id) => typeof id === "string" && id));
+  }
+
+  function savePinnedSessions() {
+    writeStoredJson(STORE.pinned, Array.from(state.pinned));
+  }
+
+  function toggleSessionPin(info) {
+    if (!info || !info.id) return;
+    if (state.pinned.has(info.id)) {
+      state.pinned.delete(info.id);
+      toast("已取消置顶", "info", 2200);
+    } else {
+      state.pinned.add(info.id);
+      toast("会话已置顶", "success", 2200);
+    }
+    savePinnedSessions();
+    renderSessions();
+  }
+
+  function createSessionItem(info) {
+    const stamp =
+      (info.time && (info.time.updated || info.time.created)) || Date.now();
+    const pinned = state.pinned.has(info.id);
+    const item = document.createElement("div");
+    item.className =
+      "session-item" +
+      (info.id === state.sessionId ? " active" : "") +
+      (pinned ? " pinned" : "");
+    item.dataset.sessionId = info.id;
+    item.setAttribute("role", "button");
+    item.setAttribute("tabindex", "0");
+    item.title = sessionTitle(info);
+
+    const indicator = document.createElement("span");
+    indicator.className = "session-indicator";
+    item.appendChild(indicator);
+
+    const main = document.createElement("span");
+    main.className = "session-main";
+    const titleEl = document.createElement("span");
+    titleEl.className = "session-title";
+    titleEl.textContent = sessionTitle(info);
+    main.appendChild(titleEl);
+
+    const meta = document.createElement("span");
+    meta.className = "session-meta";
+    const model = document.createElement("span");
+    model.className = "meta-model";
+    model.textContent =
+      info.model && (info.model.id || info.model.modelID)
+        ? modelDisplay({
+            providerID: info.model.providerID,
+            modelID: info.model.id || info.model.modelID
+          })
+        : "未指定模型";
+    meta.appendChild(model);
+    const dot = document.createElement("span");
+    dot.textContent = "·";
+    dot.style.opacity = "0.55";
+    meta.appendChild(dot);
+    const timeEl = document.createElement("span");
+    timeEl.textContent = formatRelative(stamp);
+    meta.appendChild(timeEl);
+    main.appendChild(meta);
+    item.appendChild(main);
+
+    if (pinned) {
+      const pin = document.createElement("span");
+      pin.className = "session-pin";
+      pin.title = "已置顶";
+      pin.setAttribute("aria-label", "已置顶");
+      pin.innerHTML = ICONS.pin;
+      item.appendChild(pin);
+    }
+
+    if (state.busy.has(info.id)) {
+      const busy = document.createElement("span");
+      busy.className = "session-busy";
+      busy.title = "正在处理";
+      item.appendChild(busy);
+    }
+    if (state.permissions.some((permission) => permission.sessionID === info.id)) {
+      const perm = document.createElement("span");
+      perm.className = "session-perm";
+      perm.title = "等待授权";
+      item.appendChild(perm);
+    }
+    const queued = queueFor(info.id).length;
+    if (queued) {
+      const paused = queuePausedFor(info.id);
+      const queueBadge = document.createElement("span");
+      queueBadge.className = "session-queue" + (paused ? " paused" : "");
+      queueBadge.textContent = String(queued);
+      queueBadge.title = paused
+        ? queued + " 条消息排队中（已暂停）"
+        : queued + " 条消息排队中";
+      item.appendChild(queueBadge);
+    }
+
+    const remove = document.createElement("button");
+    remove.className = "session-delete";
+    remove.type = "button";
+    remove.dataset.action = "delete-session";
+    remove.title = "删除会话";
+    remove.setAttribute("aria-label", "删除会话");
+    remove.innerHTML = ICONS.close.replace('class="icon"', 'class="icon"');
+    item.appendChild(remove);
+
+    return item;
+  }
+
   function renderSessions() {
     const query = state.search.trim().toLowerCase();
     const all = sortedSessions();
@@ -2493,96 +2611,43 @@
       return;
     }
 
-    let currentGroup = "";
-    let groupEl = null;
+    const pinned = [];
+    const regular = [];
     for (const info of list) {
-      const stamp = (info.time && (info.time.updated || info.time.created)) || Date.now();
+      if (state.pinned.has(info.id)) pinned.push(info);
+      else regular.push(info);
+    }
+
+    const sections = [];
+    if (pinned.length) {
+      sections.push({ label: "置顶", items: pinned });
+    }
+    let currentGroup = "";
+    let group = null;
+    for (const info of regular) {
+      const stamp =
+        (info.time && (info.time.updated || info.time.created)) || Date.now();
       const groupKey = sessionGroupKey(stamp);
       if (groupKey !== currentGroup) {
         currentGroup = groupKey;
-        groupEl = document.createElement("div");
-        groupEl.className = "session-group";
-        const label = document.createElement("div");
-        label.className = "session-group-label";
-        label.textContent = groupKey;
-        groupEl.appendChild(label);
-        ui.sessionList.appendChild(groupEl);
+        group = { label: groupKey, items: [] };
+        sections.push(group);
       }
+      group.items.push(info);
+    }
 
-      const item = document.createElement("div");
-      item.className = "session-item" + (info.id === state.sessionId ? " active" : "");
-      item.dataset.sessionId = info.id;
-      item.setAttribute("role", "button");
-      item.setAttribute("tabindex", "0");
-      item.title = sessionTitle(info);
-
-      const indicator = document.createElement("span");
-      indicator.className = "session-indicator";
-      item.appendChild(indicator);
-
-      const main = document.createElement("span");
-      main.className = "session-main";
-      const titleEl = document.createElement("span");
-      titleEl.className = "session-title";
-      titleEl.textContent = sessionTitle(info);
-      main.appendChild(titleEl);
-
-      const meta = document.createElement("span");
-      meta.className = "session-meta";
-      const model = document.createElement("span");
-      model.className = "meta-model";
-      model.textContent =
-        info.model && (info.model.id || info.model.modelID)
-          ? modelDisplay({
-              providerID: info.model.providerID,
-              modelID: info.model.id || info.model.modelID
-            })
-          : "未指定模型";
-      meta.appendChild(model);
-      const dot = document.createElement("span");
-      dot.textContent = "·";
-      dot.style.opacity = "0.55";
-      meta.appendChild(dot);
-      const timeEl = document.createElement("span");
-      timeEl.textContent = formatRelative(stamp);
-      meta.appendChild(timeEl);
-      main.appendChild(meta);
-      item.appendChild(main);
-
-      if (state.busy.has(info.id)) {
-        const busy = document.createElement("span");
-        busy.className = "session-busy";
-        busy.title = "正在处理";
-        item.appendChild(busy);
+    for (const section of sections) {
+      const groupEl = document.createElement("div");
+      groupEl.className =
+        "session-group" + (section.label === "置顶" ? " pinned" : "");
+      const label = document.createElement("div");
+      label.className = "session-group-label";
+      label.textContent = section.label;
+      groupEl.appendChild(label);
+      for (const info of section.items) {
+        groupEl.appendChild(createSessionItem(info));
       }
-      if (state.permissions.some((permission) => permission.sessionID === info.id)) {
-        const perm = document.createElement("span");
-        perm.className = "session-perm";
-        perm.title = "等待授权";
-        item.appendChild(perm);
-      }
-      const queued = queueFor(info.id).length;
-      if (queued) {
-        const paused = queuePausedFor(info.id);
-        const queueBadge = document.createElement("span");
-        queueBadge.className = "session-queue" + (paused ? " paused" : "");
-        queueBadge.textContent = String(queued);
-        queueBadge.title = paused
-          ? queued + " 条消息排队中（已暂停）"
-          : queued + " 条消息排队中";
-        item.appendChild(queueBadge);
-      }
-
-      const remove = document.createElement("button");
-      remove.className = "session-delete";
-      remove.type = "button";
-      remove.dataset.action = "delete-session";
-      remove.title = "删除会话";
-      remove.setAttribute("aria-label", "删除会话");
-      remove.innerHTML = ICONS.close.replace('class="icon"', 'class="icon"');
-      item.appendChild(remove);
-
-      groupEl.appendChild(item);
+      ui.sessionList.appendChild(groupEl);
     }
   }
 
@@ -2985,7 +3050,37 @@
 
   async function loadSessions() {
     const data = await ocFetch("session?limit=200", { timeout: 40000 });
-    state.sessions = Array.isArray(data) ? data : [];
+    const sessions = Array.isArray(data) ? data : [];
+    const byId = new Map(sessions.map((item) => [item.id, item]));
+    const existing = new Map(state.sessions.map((item) => [item.id, item]));
+    const missingPinned = [];
+    for (const id of state.pinned) {
+      if (!byId.has(id)) missingPinned.push(id);
+    }
+    if (missingPinned.length) {
+      const results = await Promise.allSettled(
+        missingPinned.map((id) =>
+          ocFetch("session/" + encodeURIComponent(id), { timeout: 15000 })
+        )
+      );
+      let pinsChanged = false;
+      results.forEach((result, index) => {
+        const id = missingPinned[index];
+        if (result.status === "fulfilled" && result.value && result.value.id) {
+          byId.set(result.value.id, result.value);
+        } else if (
+          result.status === "rejected" &&
+          result.reason &&
+          result.reason.status === 404
+        ) {
+          if (state.pinned.delete(id)) pinsChanged = true;
+        } else if (existing.has(id)) {
+          byId.set(id, existing.get(id));
+        }
+      });
+      if (pinsChanged) savePinnedSessions();
+    }
+    state.sessions = Array.from(byId.values());
     renderSessions();
     updateTopbar();
   }
@@ -3001,6 +3096,7 @@
     state.taskStarted.delete(sessionID);
     state.notifySuppressed.delete(sessionID);
     state.notifyFailed.delete(sessionID);
+    if (state.pinned.delete(sessionID)) savePinnedSessions();
     clearQueueTimer(sessionID);
     if (state.sessionId === sessionID) {
       state.sessionId = null;
@@ -4056,6 +4152,16 @@
     menu.className = "context-menu";
     menu.setAttribute("role", "menu");
     menu.setAttribute("aria-label", "会话操作");
+    const pin = document.createElement("button");
+    pin.type = "button";
+    pin.className = "context-menu-item";
+    pin.setAttribute("role", "menuitem");
+    pin.textContent = state.pinned.has(info.id) ? "取消置顶" : "置顶会话";
+    pin.addEventListener("click", () => {
+      closeSessionMenu();
+      toggleSessionPin(info);
+    });
+    menu.appendChild(pin);
     const rename = document.createElement("button");
     rename.type = "button";
     rename.className = "context-menu-item";
@@ -4096,7 +4202,7 @@
     menu.style.left = left + "px";
     menu.style.top = top + "px";
     state.sessionMenu = menu;
-    rename.focus();
+    pin.focus();
   }
 
   function openRenameSession(info) {
@@ -5155,6 +5261,7 @@
     state.taskStarted = new Set();
     state.notifySuppressed = new Set();
     state.notifyFailed = new Set();
+    state.pinned = loadPinnedSessions();
     state.attachments = [];
     state.addingImages = false;
     state.autoApproving = new Set();

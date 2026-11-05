@@ -461,6 +461,23 @@ html[data-theme="light"] #theme-toggle .icon-moon {
   flex: 0 0 auto;
 }
 
+.session-pin {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  opacity: 0.9;
+  flex: 0 0 auto;
+}
+
+.session-pin .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.session-group.pinned .session-group-label {
+  color: var(--accent);
+}
+
 .session-delete {
   opacity: 0;
   width: 24px;
