@@ -2466,14 +2466,22 @@
     return title || "新会话";
   }
 
-  function loadPinnedSessions() {
-    const raw = readStoredJson(STORE.pinned, []);
+  function loadPinnedSessions(serverPins) {
+    const raw = Array.isArray(serverPins)
+      ? serverPins
+      : readStoredJson(STORE.pinned, []);
     if (!Array.isArray(raw)) return new Set();
     return new Set(raw.filter((id) => typeof id === "string" && id));
   }
 
   function savePinnedSessions() {
-    writeStoredJson(STORE.pinned, Array.from(state.pinned));
+    const pins = Array.from(state.pinned);
+    writeStoredJson(STORE.pinned, pins);
+    localFetch("pins", {
+      method: "POST",
+      body: { pins },
+      timeout: 15000
+    }).catch(() => {});
   }
 
   function toggleSessionPin(info) {
@@ -5261,7 +5269,10 @@
     state.taskStarted = new Set();
     state.notifySuppressed = new Set();
     state.notifyFailed = new Set();
-    state.pinned = loadPinnedSessions();
+    state.pinned = loadPinnedSessions(data.pinnedSessions);
+    if (!Array.isArray(data.pinnedSessions) && state.pinned.size) {
+      savePinnedSessions();
+    }
     state.attachments = [];
     state.addingImages = false;
     state.autoApproving = new Set();

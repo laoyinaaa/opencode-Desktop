@@ -42,6 +42,7 @@ DESKTOP_LOG_PATH = CONFIG_DIR / "desktop.log"
 STORAGE_DIR = CONFIG_DIR / "webview"
 WALLPAPER_PATH = CONFIG_DIR / "wallpaper.bin"
 MAX_WALLPAPER_BYTES = 8 * 1024 * 1024
+MAX_PINNED_SESSIONS = 500
 WALLPAPER_MIME_TYPES = {"image/png", "image/jpeg", "image/webp", "image/gif"}
 WALLPAPER_DATA_URL_RE = re.compile(
     r"^data:(image/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$"
@@ -205,6 +206,24 @@ def save_config(data):
     temp = CONFIG_PATH.with_suffix(".json.tmp")
     temp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     os.replace(temp, CONFIG_PATH)
+
+
+def normalize_pinned_sessions(value):
+    if not isinstance(value, list):
+        return []
+    result = []
+    seen = set()
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        item = item.strip()
+        if not item or len(item) > 200 or item in seen:
+            continue
+        seen.add(item)
+        result.append(item)
+        if len(result) >= MAX_PINNED_SESSIONS:
+            break
+    return result
 
 
 def wallpaper_transparency(config):
@@ -975,6 +994,7 @@ async def bootstrap_handler(request):
             "serve": manager.status(),
             "headless": bool(app.get("headless")),
             "theme": config.get("theme"),
+            "pinnedSessions": config.get("pinnedSessions"),
             "wallpaper": wallpaper_state(config),
         }
     )
@@ -1203,6 +1223,23 @@ async def preferences_handler(request):
     return json_response({"ok": True, "theme": theme})
 
 
+async def pins_handler(request):
+    if request.method != "POST":
+        return json_response({"error": "method not allowed"}, status=405)
+    try:
+        body = await request.json()
+    except Exception:
+        return json_response({"error": "无效的请求数据"}, status=400)
+    pins = normalize_pinned_sessions(body.get("pins") if isinstance(body, dict) else None)
+    config = load_config()
+    config["pinnedSessions"] = pins
+    try:
+        save_config(config)
+    except OSError as exc:
+        return json_response({"error": f"无法保存置顶设置：{exc}"}, status=500)
+    return json_response({"ok": True, "pinnedSessions": pins})
+
+
 async def restart_handler(request):
     manager = request.app["manager"]
     if not manager.cwd:
@@ -1411,6 +1448,7 @@ def build_app(headless=False):
     app.router.add_post("/local/update", update_handler)
     app.router.add_post("/local/config", config_handler)
     app.router.add_post("/local/preferences", preferences_handler)
+    app.router.add_post("/local/pins", pins_handler)
     app.router.add_post("/local/restart", restart_handler)
     app.router.add_get("/local/meta", meta_handler)
     app.router.add_get("/local/log", log_handler)
