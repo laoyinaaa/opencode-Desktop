@@ -24,6 +24,7 @@ if not defined PYTHON (
 )
 
 if not exist ".venv\Scripts\python.exe" goto setup
+if not exist ".venv\Scripts\pythonw.exe" goto setup
 ".venv\Scripts\python.exe" -c "import webview, aiohttp" >nul 2>nul
 if not errorlevel 1 goto run
 

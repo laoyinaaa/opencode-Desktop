@@ -113,6 +113,8 @@ Get-ChildItem -LiteralPath (Join-Path $Root "static") -Force |
   Copy-Item -Destination (Join-Path $SourceStage "static") -Recurse
 Get-ChildItem -LiteralPath $Root -Filter "*.bat" -File |
   Copy-Item -Destination $SourceStage
+Get-ChildItem -LiteralPath $Root -Filter "*.vbs" -File |
+  Copy-Item -Destination $SourceStage
 Copy-Item -LiteralPath $WebViewSetup -Destination (Join-Path $SourceStage "webview2")
 Copy-Item -LiteralPath (Join-Path $Root "packaging\README-source.txt") -Destination (Join-Path $SourceStage "使用说明.txt")
 Copy-Item -LiteralPath (Join-Path $Root "packaging\登录 OpenCode.bat") -Destination $SourceStage

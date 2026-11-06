@@ -52,11 +52,11 @@ OpenCode Desktop 使用 Python、pywebview 和 WebView2 为 OpenCode CLI 提供�
    opencode --version
    ```
 
-3. 双击 `启动.bat`。首次运行会自动创建 `.venv` 并安装依赖。
+3. 双击 `启动.vbs`。它会在后台启动应用，不显示命令行窗口；首次运行会自动调用 `启动.bat` 创建 `.venv` 并安装依赖。
 
 4. 首次使用时登录 OpenCode，选择项目文件夹，然后点击“开始使用”。
 
-如果启动失败，可以双击 `调试启动.bat` 查看控制台错误。
+`启动.bat` 会显示命令行窗口，便于查看启动过程；启动失败时双击 `调试启动.bat` 查看控制台错误。
 
 ### 手动运行
 
@@ -146,7 +146,8 @@ packaging/                构建配置和说明文件
 build-release.ps1         发布包构建脚本
 requirements.txt          运行依赖
 requirements-build.txt    构建依赖
-启动.bat                  正常启动
+启动.vbs                  无命令行窗口启动（推荐）
+启动.bat                  正常启动，显示命令行窗口
 调试启动.bat              带控制台调试启动
 ```
 
