@@ -1696,10 +1696,10 @@ html[data-theme="light"] .tool-pre.error {
   padding: 7px 10px;
 }
 
-.jump-latest {
+.jump-latest,
+.jump-last-question {
   position: absolute;
   left: 50%;
-  bottom: 132px;
   transform: translateX(-50%);
   width: 32px;
   height: 32px;
@@ -1713,12 +1713,22 @@ html[data-theme="light"] .tool-pre.error {
   z-index: 18;
 }
 
-.jump-latest:hover {
+.jump-latest {
+  bottom: 132px;
+}
+
+.jump-last-question {
+  top: 84px;
+}
+
+.jump-latest:hover,
+.jump-last-question:hover {
   color: var(--text);
   border-color: var(--accent-line);
 }
 
-.jump-latest .icon {
+.jump-latest .icon,
+.jump-last-question .icon {
   width: 16px;
   height: 16px;
 }

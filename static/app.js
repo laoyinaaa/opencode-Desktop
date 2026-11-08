@@ -55,6 +55,7 @@
     welcomeSub: $("#welcome-sub"),
     messages: $("#messages"),
     jumpLatest: $("#jump-latest"),
+    jumpLastQuestion: $("#jump-last-question"),
     composer: $(".composer"),
     prompt: $("#prompt"),
     attachBtn: $("#attach-btn"),
@@ -660,6 +661,7 @@
   }
 
   function scrollToBottom(behavior) {
+    cancelJumpScroll();
     if (behavior === "smooth") {
       ui.chatScroll.scrollTo({
         top: ui.chatScroll.scrollHeight,
@@ -670,11 +672,75 @@
     }
     state.autoScroll = true;
     ui.jumpLatest.hidden = true;
+    updateJumpLastQuestionVisibility();
+  }
+
+  function getQuestionAnchor() {
+    const viewTop = ui.chatScroll.getBoundingClientRect().top;
+    let anchor = null;
+    const items = ui.messages.querySelectorAll(".msg.user");
+    for (const item of items) {
+      if (item.getBoundingClientRect().top < viewTop) {
+        anchor = item;
+      } else {
+        break;
+      }
+    }
+    return anchor;
+  }
+
+  function updateJumpLastQuestionVisibility() {
+    const btn = ui.jumpLastQuestion;
+    if (!btn) return;
+    btn.hidden = !getQuestionAnchor();
+  }
+
+  function scrollToLastQuestion(behavior) {
+    const target = getQuestionAnchor();
+    if (!target) return;
+    const el = ui.chatScroll;
+    const top = Math.max(
+      0,
+      target.getBoundingClientRect().top -
+        el.getBoundingClientRect().top +
+        el.scrollTop -
+        14
+    );
+    state.autoScroll = false;
+    beginJumpScroll();
+    if (behavior === "smooth") {
+      el.scrollTo({ top, behavior: "smooth" });
+    } else {
+      el.scrollTop = top;
+    }
+    updateJumpLastQuestionVisibility();
   }
 
   const scheduleScroll = debounce(() => {
     if (state.autoScroll) scrollToBottom("auto");
   }, 40);
+
+  let jumpScrollTimer = 0;
+
+  function cancelJumpScroll() {
+    if (jumpScrollTimer) {
+      window.clearTimeout(jumpScrollTimer);
+      jumpScrollTimer = 0;
+    }
+  }
+
+  function finishJumpScroll() {
+    jumpScrollTimer = 0;
+    state.autoScroll = isNearBottom();
+    ui.jumpLatest.hidden = state.autoScroll;
+    updateJumpLastQuestionVisibility();
+  }
+
+  function beginJumpScroll() {
+    cancelJumpScroll();
+    state.autoScroll = false;
+    jumpScrollTimer = window.setTimeout(finishJumpScroll, 700);
+  }
 
   function syncNativeTitlebarTheme(theme, attempt) {
     const api = window.pywebview && window.pywebview.api;
@@ -3306,6 +3372,7 @@
     ui.messages.innerHTML = "";
     ui.welcome.hidden = false;
     ui.jumpLatest.hidden = true;
+    if (ui.jumpLastQuestion) ui.jumpLastQuestion.hidden = true;
   }
 
   function showChatLoading() {
@@ -5758,6 +5825,7 @@
     ui.updateStart.addEventListener("click", runCliUpdate);
     ui.updateLater.addEventListener("click", () => closeModal(ui.updateModal));
     ui.jumpLatest.addEventListener("click", () => scrollToBottom("smooth"));
+    ui.jumpLastQuestion.addEventListener("click", () => scrollToLastQuestion("smooth"));
 
     ui.attachBtn.addEventListener("click", () => ui.imageInput.click());
     ui.fileBtn.addEventListener("click", pickLocalFiles);
@@ -5847,8 +5915,16 @@
     ui.chatScroll.addEventListener(
       "scroll",
       () => {
+        if (jumpScrollTimer) {
+          window.clearTimeout(jumpScrollTimer);
+          jumpScrollTimer = window.setTimeout(finishJumpScroll, 300);
+          ui.jumpLatest.hidden = false;
+          updateJumpLastQuestionVisibility();
+          return;
+        }
         state.autoScroll = isNearBottom();
         ui.jumpLatest.hidden = state.autoScroll;
+        updateJumpLastQuestionVisibility();
       },
       { passive: true }
     );
