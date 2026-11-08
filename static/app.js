@@ -11,13 +11,15 @@
     variants: "oc.variants",
     session: "oc.session",
     autoAllow: "oc.autoAllow",
-    pinned: "oc.pinnedSessions"
+    pinned: "oc.pinnedSessions",
+    sidebarWidth: "oc.sidebarWidth"
   };
 
   const ui = {
     app: $("#app"),
     appBackground: $("#app-background"),
     sidebar: $("#sidebar"),
+    sidebarResizer: $("#sidebar-resizer"),
     sidebarToggle: $("#sidebar-toggle"),
     sidebarBackdrop: $("#sidebar-backdrop"),
     themeToggle: $("#theme-toggle"),
@@ -740,6 +742,70 @@
     } catch (error) {}
     state.autoAllow = saved;
     if (ui.settingsAutoAllow) ui.settingsAutoAllow.checked = saved;
+  }
+
+  function initSidebarResize() {
+    const resizer = ui.sidebarResizer;
+    const sidebar = ui.sidebar;
+    if (!resizer || !sidebar) return;
+
+    const MIN = 220;
+    const MAX = 520;
+    const DEFAULT = 292;
+
+    let saved = 0;
+    try {
+      saved = parseInt(localStorage.getItem(STORE.sidebarWidth) || "", 10) || 0;
+    } catch (e) {}
+    if (!saved && state.bootstrap && state.bootstrap.sidebarWidth) {
+      saved = state.bootstrap.sidebarWidth;
+    }
+    if (saved >= MIN && saved <= MAX) {
+      document.documentElement.style.setProperty("--sidebar-width", saved + "px");
+    }
+
+    let dragging = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizer.addEventListener("mousedown", function (e) {
+      e.preventDefault();
+      dragging = true;
+      startX = e.clientX;
+      startWidth = sidebar.offsetWidth;
+      resizer.classList.add("active");
+      document.body.classList.add("resizing");
+
+      function onMove(e) {
+        if (!dragging) return;
+        const delta = e.clientX - startX;
+        const newWidth = Math.min(MAX, Math.max(MIN, startWidth + delta));
+        document.documentElement.style.setProperty("--sidebar-width", newWidth + "px");
+      }
+
+      function onUp() {
+        dragging = false;
+        resizer.classList.remove("active");
+        document.body.classList.remove("resizing");
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+
+        const finalWidth = parseInt(
+          getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width")
+        ) || DEFAULT;
+        try {
+          localStorage.setItem(STORE.sidebarWidth, String(finalWidth));
+        } catch (e) {}
+        localFetch("preferences", {
+          method: "POST",
+          body: { sidebarWidth: finalWidth },
+          timeout: 15000
+        }).catch(function () {});
+      }
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
   }
 
   function clampWallpaperTransparency(value) {
@@ -5471,6 +5537,7 @@
     initMarkdown();
     initTheme();
     initAutoAllow();
+    initSidebarResize();
     initWallpaper();
     bindEvents();
     window.setTimeout(() => checkForCliUpdate(), 1000);

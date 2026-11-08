@@ -161,7 +161,7 @@ input, textarea {
 .app {
   height: 100vh;
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) 5px minmax(0, 1fr);
   background: var(--bg);
   position: relative;
   z-index: 1;
@@ -176,9 +176,41 @@ input, textarea {
   background:
     radial-gradient(120% 60% at 10% 0%, rgba(109, 148, 255, 0.07), transparent 60%),
     var(--sidebar);
-  border-right: 1px solid var(--border-soft);
   position: relative;
   z-index: 30;
+}
+
+.sidebar-resizer {
+  position: relative;
+  cursor: col-resize;
+  z-index: 25;
+}
+
+.sidebar-resizer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  background: var(--border-soft);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.sidebar-resizer:hover::before,
+.sidebar-resizer.active::before {
+  width: 3px;
+  background: var(--accent);
+}
+
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+body.resizing * {
+  cursor: col-resize !important;
 }
 
 .sidebar-head {
@@ -817,7 +849,6 @@ html[data-theme="light"] .update-btn .badge {
 
 .chat {
   width: 100%;
-  max-width: 940px;
   margin: 0 auto;
   padding: 34px 30px 26px;
 }
@@ -1706,7 +1737,6 @@ html[data-theme="light"] .composer-wrap {
 
 .composer {
   position: relative;
-  max-width: 920px;
   margin: 0 auto;
   border: 1px solid var(--border);
   border-radius: 15px;
@@ -1918,7 +1948,6 @@ html[data-theme="light"] .composer-wrap {
 }
 
 .prompt-queue {
-  max-width: 920px;
   margin: 0 auto 6px;
   display: flex;
   flex-direction: column;
@@ -2281,7 +2310,6 @@ html[data-theme="light"] .composer-wrap {
 }
 
 .composer-status {
-  max-width: 920px;
   margin: 5px auto 0;
   min-height: 14px;
   font-size: 10.5px;
@@ -3793,6 +3821,9 @@ html.has-wallpaper .composer {
 }
 
 @media (max-width: 900px) {
+  .sidebar-resizer {
+    display: none;
+  }
   .app {
     grid-template-columns: minmax(0, 1fr);
   }

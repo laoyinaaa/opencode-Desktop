@@ -994,6 +994,7 @@ async def bootstrap_handler(request):
             "serve": manager.status(),
             "headless": bool(app.get("headless")),
             "theme": config.get("theme"),
+            "sidebarWidth": config.get("sidebarWidth"),
             "pinnedSessions": config.get("pinnedSessions"),
             "wallpaper": wallpaper_state(config),
         }
@@ -1211,16 +1212,39 @@ async def preferences_handler(request):
         body = await request.json()
     except Exception:
         return json_response({"error": "无效的请求数据"}, status=400)
-    theme = body.get("theme") if isinstance(body, dict) else None
-    if theme not in ("dark", "light"):
+    if not isinstance(body, dict):
+        return json_response({"error": "无效的请求数据"}, status=400)
+
+    theme = body.get("theme")
+    sidebar_width = body.get("sidebarWidth")
+
+    if theme is not None and theme not in ("dark", "light"):
         return json_response({"error": "主题参数无效"}, status=400)
+    if sidebar_width is not None:
+        try:
+            sidebar_width = int(sidebar_width)
+            if not (180 <= sidebar_width <= 600):
+                return json_response({"error": "侧栏宽度无效"}, status=400)
+        except (ValueError, TypeError):
+            return json_response({"error": "侧栏宽度无效"}, status=400)
+    if theme is None and sidebar_width is None:
+        return json_response({"error": "无有效参数"}, status=400)
+
     config = load_config()
-    config["theme"] = theme
+    if theme is not None:
+        config["theme"] = theme
+    if sidebar_width is not None:
+        config["sidebarWidth"] = sidebar_width
     try:
         save_config(config)
     except OSError as exc:
         return json_response({"error": f"无法保存界面设置：{exc}"}, status=500)
-    return json_response({"ok": True, "theme": theme})
+    resp = {"ok": True}
+    if theme is not None:
+        resp["theme"] = theme
+    if sidebar_width is not None:
+        resp["sidebarWidth"] = sidebar_width
+    return json_response(resp)
 
 
 async def pins_handler(request):
