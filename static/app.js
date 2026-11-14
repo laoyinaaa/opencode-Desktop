@@ -680,6 +680,7 @@
     let anchor = null;
     const items = ui.messages.querySelectorAll(".msg.user");
     for (const item of items) {
+      if (item.getClientRects().length === 0) continue;
       if (item.getBoundingClientRect().top < viewTop) {
         anchor = item;
       } else {
