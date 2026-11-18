@@ -506,6 +506,35 @@ html[data-theme="light"] #theme-toggle .icon-moon {
   height: 13px;
 }
 
+.session-item.completed .session-indicator {
+  background: linear-gradient(var(--accent), var(--accent-2));
+  opacity: 0.5;
+}
+
+.session-item.completed .session-title {
+  color: var(--accent);
+}
+
+.session-item.failed .session-title {
+  color: var(--danger);
+}
+
+.session-done {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.session-done .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.session-done.failed {
+  color: var(--danger);
+}
+
 .session-group.pinned .session-group-label {
   color: var(--accent);
 }
@@ -2096,6 +2125,15 @@ html[data-theme="light"] .composer-wrap {
 .queue-btn.danger:hover {
   color: var(--danger);
   background: var(--danger-soft);
+}
+
+.queue-btn.accent {
+  color: var(--text-dim);
+}
+
+.queue-btn.accent:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .queue-btn:disabled {

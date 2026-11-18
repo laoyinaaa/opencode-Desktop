@@ -152,6 +152,7 @@
     sessions: [],
     sessionId: null,
     sessionInfo: null,
+    completed: new Map(),
     messages: new Map(),
     messageOrder: [],
     partNodes: new Map(),
@@ -164,6 +165,7 @@
     queueRuns: new Map(),
     queueStepReady: new Set(),
     queueAwaiting: new Set(),
+    queueInserting: new Set(),
     taskStarted: new Set(),
     notifySuppressed: new Set(),
     notifyFailed: new Set(),
@@ -1191,6 +1193,9 @@
       (state.sessionInfo && state.sessionInfo.id === sessionID ? state.sessionInfo : null);
     const title = sessionTitle(info);
     const failed = state.notifyFailed.delete(sessionID);
+    if (sessionID !== state.sessionId) {
+      state.completed.set(sessionID, failed ? "failed" : "done");
+    }
     const prefix = failed ? "任务未完成" : "任务完成";
     let body = failed
       ? "会话「" + title + "」执行失败，请返回查看"
@@ -1549,6 +1554,7 @@
     const sessionID = state.sessionId;
     const paused = queuePausedFor(sessionID);
     const sending = Boolean(sessionID && state.queueSending.has(sessionID));
+    const inserting = Boolean(sessionID && state.queueInserting.has(sessionID));
     const headError = queue.length > 0 && Boolean(queue[0].error);
     ui.promptQueue.innerHTML = "";
     ui.promptQueue.hidden = !queue.length;
@@ -1557,11 +1563,16 @@
     head.className = "queue-head";
     const label = document.createElement("strong");
     label.textContent =
-      "排队消息 " + queue.length + " 条" + (sending ? " · 插入中" : "");
+      "排队消息 " +
+      queue.length +
+      " 条" +
+      (sending ? " · 插入中" : inserting ? " · 打断中" : "");
     head.appendChild(label);
     const hint = document.createElement("span");
     hint.textContent = headError
       ? "首条失败，处理后可继续"
+      : inserting
+      ? "正在打断当前任务，即将插入"
       : paused
       ? "已暂停，等待手动继续"
       : sending
@@ -1664,6 +1675,22 @@
         retry.textContent = "重试";
         retry.addEventListener("click", () => retryQueueItem(item.sessionID, item.id));
         actions.appendChild(retry);
+      } else {
+        const insert = document.createElement("button");
+        insert.type = "button";
+        insert.className = "queue-btn accent";
+        insert.textContent = inserting ? "打断中…" : "直接插入";
+        insert.title = inserting
+          ? "正在打断当前任务…"
+          : sending
+          ? "正在插入其他消息，请稍候"
+          : state.busy.get(sessionID)
+          ? "打断当前任务，并立即插入这条消息"
+          : "立即发送这条消息";
+        insert.setAttribute("aria-label", insert.title);
+        insert.disabled = inserting || sending || isSending;
+        insert.addEventListener("click", () => insertQueueItem(sessionID, item.id));
+        actions.appendChild(insert);
       }
       const remove = document.createElement("button");
       remove.type = "button";
@@ -1712,6 +1739,60 @@
     updateComposer();
     if (sessionID === state.sessionId) refreshComposerStatus();
     scheduleQueueFlush(sessionID, 0);
+  }
+
+  async function insertQueueItem(sessionID, itemID) {
+    const queue = state.queues.get(sessionID);
+    if (!queue) return;
+    const index = queue.findIndex((item) => item.id === itemID);
+    if (index < 0) return;
+    const item = queue[index];
+    if (item.error) return;
+    if (state.queueSending.has(sessionID) || state.queueInserting.has(sessionID)) {
+      toast("正在插入消息，请稍候", "info", 2400);
+      return;
+    }
+    if (index > 0) {
+      queue.splice(index, 1);
+      queue.unshift(item);
+    }
+    item.force = true;
+    clearQueueTimer(sessionID);
+    state.queueInserting.add(sessionID);
+    const busy = Boolean(state.busy.get(sessionID));
+    if (busy) state.notifySuppressed.add(sessionID);
+    refreshQueueUI(sessionID);
+    let abortError = null;
+    if (busy) {
+      try {
+        await ocFetch("session/" + encodeURIComponent(sessionID) + "/abort", {
+          method: "POST",
+          timeout: 30000
+        });
+        setSessionStatus(sessionID, { type: "idle" });
+        window.setTimeout(() => loadStatuses(), 500);
+      } catch (error) {
+        abortError = error;
+      }
+    }
+    state.queueInserting.delete(sessionID);
+    if (abortError) {
+      item.force = false;
+      state.notifySuppressed.delete(sessionID);
+      refreshQueueUI(sessionID);
+      toast("打断当前任务失败：" + abortError.message, "error");
+      return;
+    }
+    state.queueAwaiting.delete(sessionID);
+    state.queueStepReady.delete(sessionID);
+    refreshQueueUI(sessionID);
+    if (sessionID === state.sessionId) {
+      toast(busy ? "已打断当前任务，正在插入" : "正在插入消息", "info", 2200);
+    }
+    window.setTimeout(() => {
+      flushQueue(sessionID);
+      if (busy) window.setTimeout(() => state.notifyFailed.delete(sessionID), 900);
+    }, busy ? 300 : 0);
   }
 
   function flushPendingQueues() {
@@ -2634,11 +2715,13 @@
     const stamp =
       (info.time && (info.time.updated || info.time.created)) || Date.now();
     const pinned = state.pinned.has(info.id);
+    const completed = state.completed.get(info.id) || "";
     const item = document.createElement("div");
     item.className =
       "session-item" +
       (info.id === state.sessionId ? " active" : "") +
-      (pinned ? " pinned" : "");
+      (pinned ? " pinned" : "") +
+      (completed ? (completed === "failed" ? " failed" : " completed") : "");
     item.dataset.sessionId = info.id;
     item.setAttribute("role", "button");
     item.setAttribute("tabindex", "0");
@@ -2684,6 +2767,15 @@
       pin.setAttribute("aria-label", "已置顶");
       pin.innerHTML = ICONS.pin;
       item.appendChild(pin);
+    }
+
+    if (completed) {
+      const done = document.createElement("span");
+      done.className = "session-done" + (completed === "failed" ? " failed" : "");
+      done.title = completed === "failed" ? "刚结束的任务（有错误）" : "刚完成的任务";
+      done.setAttribute("aria-label", done.title);
+      done.innerHTML = completed === "failed" ? ICONS.error : ICONS.success;
+      item.appendChild(done);
     }
 
     if (state.busy.has(info.id)) {
@@ -3237,6 +3329,8 @@
     state.taskStarted.delete(sessionID);
     state.notifySuppressed.delete(sessionID);
     state.notifyFailed.delete(sessionID);
+    state.completed.delete(sessionID);
+    state.queueInserting.delete(sessionID);
     if (state.pinned.delete(sessionID)) savePinnedSessions();
     clearQueueTimer(sessionID);
     if (state.sessionId === sessionID) {
@@ -3304,6 +3398,7 @@
     } else {
       state.taskStarted.add(sessionID);
       state.busy.set(sessionID, status);
+      state.completed.delete(sessionID);
       clearQueueTimer(sessionID);
     }
     renderSessions();
@@ -4235,6 +4330,7 @@
     const token = ++state.loadSeq;
     state.sessionId = sessionID;
     state.sessionInfo = info;
+    state.completed.delete(sessionID);
     state.todos = [];
     state.loadingSession = true;
     state.activePermissionId = null;
@@ -4601,8 +4697,7 @@
     if (
       !sessionID ||
       state.queueSending.has(sessionID) ||
-      state.queueAwaiting.has(sessionID) ||
-      queuePausedFor(sessionID)
+      state.queueAwaiting.has(sessionID)
     ) {
       return;
     }
@@ -4610,6 +4705,7 @@
     if (!queue || !queue.length) return;
     const item = queue[0];
     if (item.error) return;
+    if (queuePausedFor(sessionID) && !item.force) return;
     if (!item.model) {
       item.error = "缺少模型信息";
       renderQueue();
@@ -4633,6 +4729,7 @@
     } catch (error) {
       if (state.queueRuns.get(sessionID) !== token) return;
       item.error = error.message || "发送失败";
+      item.force = false;
       toast("排队消息发送失败：" + item.error, "error", 6000);
     } finally {
       if (state.queueRuns.get(sessionID) === token) {
@@ -5393,6 +5490,7 @@
     state.permissions = [];
     state.questions = [];
     state.busy = new Map();
+    state.completed = new Map();
     state.queues = new Map();
     state.queueSending = new Set();
     state.queuePaused = new Set();
@@ -5400,6 +5498,7 @@
     state.queueRuns = new Map();
     state.queueStepReady = new Set();
     state.queueAwaiting = new Set();
+    state.queueInserting = new Set();
     state.taskStarted = new Set();
     state.notifySuppressed = new Set();
     state.notifyFailed = new Set();

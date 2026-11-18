@@ -22,7 +22,7 @@ import webview
 from aiohttp import ClientSession, ClientTimeout, web
 
 APP_TITLE = "OpenCode 桌面"
-APP_VERSION = "2.7.6"
+APP_VERSION = "2.7.7"
 APP_DIR = Path(__file__).resolve().parent
 RESOURCE_DIR = APP_DIR
 if getattr(sys, "frozen", False):
